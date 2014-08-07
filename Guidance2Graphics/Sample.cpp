@@ -198,9 +198,7 @@ int main()
 	// graphical window
 	//-----------------------------------------------------------
 	cout << "Collecting data records at " << rate * 3.0 <<  "hz" << endl;
-	double xCurr, yCurr, zCurr;
-	double xOrigin, yOrigin, zOrigin;
-	int xDiff, yDiff, zDiff;
+	Vector3 origin, current, difference;
 	char uselessInput;
 	bool continueReading = true;
 	i = 0;
@@ -211,15 +209,8 @@ int main()
 		if (i == 0) {
 			cout << "\nType 's' and press <ENTER> to set origin" << endl;
 			cin >> uselessInput;
-			vector<double> originAverages = averageForTime(CALIBRATION_TIME, PCIBird);
-
-			xCurr = originAverages.at(0);
-			yCurr = originAverages.at(1);
-			zCurr = originAverages.at(2);
-
-			xOrigin = xCurr;
-			yOrigin = yCurr;
-			zOrigin = zCurr;
+			origin = averageForTime(CALIBRATION_TIME, PCIBird);
+			current = origin;
 		}
 		else {
 			// Obtain readings for all connected birds
@@ -227,34 +218,33 @@ int main()
 			if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
 			// Set current coordinates of sensor
-			xCurr = record[0].x;
-			yCurr = record[0].y;
-			zCurr = record[0].z;
+			current.set(record[0].x, record[0].y, record[0].z);
 		}
 
-		cout << xCurr - xOrigin << '\t' << yCurr - yOrigin << '\t' << zCurr - zOrigin << endl;
+		cout << current.at(0) - origin.at(0) << '\t' << current.at(1) - origin.at(1) << '\t' << current.at(2) - origin.at(2) << endl;
 
 		// Find the difference between the current coordinates and the origin
-		xDiff = floor(xCurr - xOrigin);
-		yDiff = floor(yCurr - yOrigin);
-		zDiff = floor(zCurr - zOrigin);
-		
+		difference = current - origin;
+
+		// Round points to the nearest integer
+		difference.set(floor(difference.at(0) + .5), floor(difference.at(0) + .5), floor(difference.at(0) + .5));
+
 		// Set origin images for each window
 		if (i == 0) {
-			axialView.setOriginImage(zDiff);
-			coronalView.setOriginImage(xDiff);
-			sagittalView.setOriginImage(yDiff);
+			axialView.setOriginImage(difference.at(2));
+			coronalView.setOriginImage(difference.at(0));
+			sagittalView.setOriginImage(difference.at(1));
 		}
 
 		// Update all windows and their contained circles
-		axialView.resetImage(axialView.updateImage(-zDiff));
-		axialView.resetCircle(axialView.updateCircleX(yDiff),coronalView.updateCircleY(-xDiff));
+		axialView.resetImage(axialView.updateImage(-difference.at(2)));
+		axialView.resetCircle(axialView.updateCircleX(difference.at(1)),coronalView.updateCircleY(-difference.at(0)));
 
-		coronalView.resetImage(coronalView.updateImage(-xDiff));
-		coronalView.resetCircle(coronalView.updateCircleX(-yDiff),coronalView.updateCircleY(zDiff));
+		coronalView.resetImage(coronalView.updateImage(-difference.at(0)));
+		coronalView.resetCircle(coronalView.updateCircleX(-difference.at(1)),coronalView.updateCircleY(difference.at(2)));
 
-		sagittalView.resetImage(sagittalView.updateImage(yDiff));
-		sagittalView.resetCircle(sagittalView.updateCircleX(-xDiff),sagittalView.updateCircleY(zDiff));
+		sagittalView.resetImage(sagittalView.updateImage(difference.at(1)));
+		sagittalView.resetCircle(sagittalView.updateCircleX(-difference.at(0)),sagittalView.updateCircleY(difference.at(2)));
 
 		axialWindow.clear();
 		axialWindow.draw(axialView.getImageSprite());
@@ -327,7 +317,7 @@ Vector3 averageForTime(int numSeconds, CSystem system )
 	clock_t goal = wait + clock();
 
 	int numReadings = numSeconds * 100;
-	Vector3 averageReadings(0,0,0);
+	double x = 0, y = 0, z = 0;
 	DOUBLE_POSITION_ANGLES_TIME_Q_RECORD record[8*4], *pRecord = record;
 
 	cout << "Finding stabilized position";
@@ -342,14 +332,12 @@ Vector3 averageForTime(int numSeconds, CSystem system )
 		int errorCode = GetSynchronousRecord(ALL_SENSORS, pRecord, sizeof(record[0]) * system.m_config.numberSensors);
 		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
-		averageReadings.at(0) += record[0].x;
-		averageReadings.at(1) += record[0].y;
-		averageReadings.at(2) += record[0].z;
+		x += record[0].x;
+		y += record[0].y;
+		z += record[0].z;
 	}
 
-	averageReadings.at(0) /= numReadings;
-	averageReadings.at(1) /= numReadings;
-	averageReadings.at(2) /= numReadings;
+	Vector3 averageReadings(x / numReadings, y / numReadings, z / numReadings);
 
 	cout << "AVERAGE:" << endl;
 	cout << averageReadings.at(0) << ' ' << averageReadings.at(1) << ' ' << averageReadings.at(2) << endl;

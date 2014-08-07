@@ -3,6 +3,11 @@
 // Custom Constructor
 Vector3::Vector3(double val1, double val2, double val3)
 {
+	set(val1, val2, val3);
+};
+
+void Vector3::set(double val1, double val2, double val3)
+{
 	m_vBody.push_back(val1);
 	m_vBody.push_back(val2);
 	m_vBody.push_back(val3);
