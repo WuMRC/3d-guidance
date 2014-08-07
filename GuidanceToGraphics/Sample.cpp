@@ -1,37 +1,18 @@
 #include "stdafx.h"
-#include <SFML/Graphics.hpp>
-#include <vector>
-#include <dirent.h>
-#include <string>
-#include <stdlib.h>
-#include <sstream>
-#include <math.h>
-#include "ViewManager.h"
-#include <iostream>
 
 extern "C" void exit( int);
 
-// Forward declaration of error handler
-//
-// A very simple error handler is provided at the end of this file
-// It simply takes error codes and converts them to message strings
-// then outputs them to the console.
-//
-void errorHandler(int error);
-
-// An output buffer
-// 10000 records * 8 possible units * 4 sensors per unit *128 bytes of string storage
-char output[10000][8*4][128] = { { { 0,}, }, };
-
 using namespace std;
 
-/////////////////////////////////////////////////////////////////
-// MAIN
-/////////////////////////////////////////////////////////////////
+void errorHandler(int error);
+Vector3 averageForTime(int numSeconds, CSystem system);
+
 
 int main()
 {
-	// Initialize graphics windows
+	//////////////////////////////////////////////////////////////
+	// INITIALIZE GRAPHICS WINDOWS
+	//////////////////////////////////////////////////////////////
 	sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
 	int DESKTOP_HEIGHT = desktop.height;
 	int DESKTOP_WIDTH = desktop.width;
@@ -66,7 +47,11 @@ int main()
 	sagittalWindow.draw(sagittalView.getCircle());
 	sagittalWindow.display();
 
-	// Initialize necesarry variables for tracker API
+	//////////////////////////////////////////////////////////////
+	// INITIALIZE VARIABLES FOR ATC3DG SYSTEM
+	//-----------------------------------------------------------
+	// Set variables which will be used for the entire system.
+	//-----------------------------------------------------------
 	CSystem	PCIBird;
 	CSensor *pSensor;
 	CXmtr *pXmtr;
@@ -75,8 +60,10 @@ int main()
 	int sensorID;
 	short id;
 	int records = 20000;
-	double rate = 255.0f;
-	const int INCH_2_MM = 25.4;
+	const int CALIBRATION_TIME = 5;
+	double rate = 75;
+	BOOL metric = true;
+	//////////////////////////////////////////////////////////////
 
 	// Initialize the PCIBIRD driver and DLL
 	//
@@ -98,7 +85,15 @@ int main()
 		exit(1);
 	}
 
-	// Get tracker system configuration
+	//////////////////////////////////////////////////////////////
+	// GET SYSTEM, SENSOR, AND TRANSMITTER CONFIGURATION
+	//-----------------------------------------------------------
+	// Pull info from the ATC3DG system, transmitter, and sensor.
+	// The values obtained give information on anything from measurement
+	// rate to number of sensors attached to the system.
+	//-----------------------------------------------------------
+	//
+	// Get System Configuration
 	//
 	// In order to get information about the system we have to make a call to
 	// GetBIRDSystemConfiguration(). This call will fill a fixed size structure
@@ -110,7 +105,7 @@ int main()
 	errorCode = GetBIRDSystemConfiguration(&PCIBird.m_config);
 	if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
-	// Get sensor configuration
+	// Get Sensor Configuration
 	//
 	// Having determined how many sensors can be supported we can dynamically
 	// allocate storage for the information about each sensor.
@@ -126,7 +121,7 @@ int main()
 		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 	}
 
-	// Get transmitter configuration
+	// Get Transmitter Configuration
 	//
 	// The call to GetTransmitterConfiguration() performs a similar task to the 
 	// GetSensorConfiguration() call. It also returns a status in the filled
@@ -140,10 +135,31 @@ int main()
 		errorCode = GetTransmitterConfiguration(i, &(pXmtr+i)->m_config);
 		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 	}
+	//////////////////////////////////////////////////////////////
 
-	// Set the measurement rate
+	//////////////////////////////////////////////////////////////
+	// SET SYSTEM PARAMETERS
+	//-----------------------------------------------------------
+	// Unlike setting parameters for the transmitter and 
+	// sensors individually, setting system parameters changes the 
+	// state of the variable for the entire system
+	//-----------------------------------------------------------
+
+	// Set system measurement rate
 	errorCode = SetSystemParameter(MEASUREMENT_RATE, &rate, sizeof(rate));
 	if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+	// Set system measurement type
+	errorCode = SetSystemParameter(METRIC, &metric, sizeof(metric));
+	if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+	//////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////
+	// TRACKING PREPARATION
+	//-----------------------------------------------------------
+	// This block contains final set up for continuous tracking
+	//-----------------------------------------------------------
 
 	// Search for the first attached transmitter and turn it on
 	for(id=0;id<PCIBird.m_config.numberTransmitters;id++)
@@ -173,9 +189,15 @@ int main()
 		errorCode = SetSensorParameter(i,DATA_FORMAT,&type,sizeof(type));
 		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 	}
+	//////////////////////////////////////////////////////////////
 
-	// Collect as many records as specified in the records var
-	printf("Collecting %d data records at %3.2fhz...\n", records, rate*3.0);
+	//////////////////////////////////////////////////////////////
+	// READ AND USE TRACKER VALUES
+	//-----------------------------------------------------------
+	// Read tracker values from sensor and dislay information to
+	// graphical window
+	//-----------------------------------------------------------
+	cout << "Collecting data records at " << rate * 3.0 <<  "hz" << endl;
 	double xCurr, yCurr, zCurr;
 	double xOrigin, yOrigin, zOrigin;
 	int xDiff, yDiff, zDiff;
@@ -185,41 +207,46 @@ int main()
 
 	while (continueReading)//for(i=0;i<records;i++)
 	{
-		// Set previous values to be last current ones
+		// Prompt physical selection of origin
 		if (i == 0) {
 			cout << "\nType 's' and press <ENTER> to set origin" << endl;
 			cin >> uselessInput;
-		}
+			vector<double> originAverages = averageForTime(CALIBRATION_TIME, PCIBird);
 
-		errorCode = GetSynchronousRecord(ALL_SENSORS, pRecord, sizeof(record[0]) * PCIBird.m_config.numberSensors);
-		if(errorCode!=BIRD_ERROR_SUCCESS) 
-		{
-			errorHandler(errorCode);
-		}
+			xCurr = originAverages.at(0);
+			yCurr = originAverages.at(1);
+			zCurr = originAverages.at(2);
 
-		xCurr = record[0].x * INCH_2_MM;
-		yCurr = record[0].y * INCH_2_MM;
-		zCurr = record[0].z * INCH_2_MM;
-
-		if (i == 0) {
 			xOrigin = xCurr;
 			yOrigin = yCurr;
 			zOrigin = zCurr;
 		}
+		else {
+			// Obtain readings for all connected birds
+			errorCode = GetSynchronousRecord(ALL_SENSORS, pRecord, sizeof(record[0]) * PCIBird.m_config.numberSensors);
+			if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+			// Set current coordinates of sensor
+			xCurr = record[0].x;
+			yCurr = record[0].y;
+			zCurr = record[0].z;
+		}
 
 		cout << xCurr - xOrigin << '\t' << yCurr - yOrigin << '\t' << zCurr - zOrigin << endl;
 
+		// Find the difference between the current coordinates and the origin
 		xDiff = floor(xCurr - xOrigin);
 		yDiff = floor(yCurr - yOrigin);
 		zDiff = floor(zCurr - zOrigin);
 		
+		// Set origin images for each window
 		if (i == 0) {
 			axialView.setOriginImage(zDiff);
 			coronalView.setOriginImage(xDiff);
 			sagittalView.setOriginImage(yDiff);
 		}
 
-
+		// Update all windows and their contained circles
 		axialView.resetImage(axialView.updateImage(-zDiff));
 		axialView.resetCircle(axialView.updateCircleX(yDiff),coronalView.updateCircleY(-xDiff));
 
@@ -244,6 +271,7 @@ int main()
 		sagittalWindow.draw(sagittalView.getCircle());
 		sagittalWindow.display();
 
+		// Prompt user to continue reading each (int)records number or readings
 		if (i % records == 0 && i != 0 ) {
 			cout << "\nPress 'c' to continue and 'q' to quit" << endl;
 			cin >> uselessInput;
@@ -269,7 +297,6 @@ int main()
 	return 0;
 }
 
-
 //	ERROR HANDLER
 //
 // This is a simplified error handler.
@@ -292,4 +319,40 @@ void errorHandler(int error)
 		buffer[numberBytes] = '\n';		// append a newline to buffer
 		printf("%s", buffer);
 	}
+}
+
+Vector3 averageForTime(int numSeconds, CSystem system )
+{
+	clock_t wait = 10;
+	clock_t goal = wait + clock();
+
+	int numReadings = numSeconds * 100;
+	Vector3 averageReadings(0,0,0);
+	DOUBLE_POSITION_ANGLES_TIME_Q_RECORD record[8*4], *pRecord = record;
+
+	cout << "Finding stabilized position";
+	for (int i = 0; i < numReadings; i++) {
+		if ( i % 100 == 0) cout << '.';
+
+		// Delay 10ms between collecting data and wait until time delay expires
+		while(goal>clock());
+		// Set up time delay for next loop
+		goal = wait + clock();
+
+		int errorCode = GetSynchronousRecord(ALL_SENSORS, pRecord, sizeof(record[0]) * system.m_config.numberSensors);
+		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
+
+		averageReadings.at(0) += record[0].x;
+		averageReadings.at(1) += record[0].y;
+		averageReadings.at(2) += record[0].z;
+	}
+
+	averageReadings.at(0) /= numReadings;
+	averageReadings.at(1) /= numReadings;
+	averageReadings.at(2) /= numReadings;
+
+	cout << "AVERAGE:" << endl;
+	cout << averageReadings.at(0) << ' ' << averageReadings.at(1) << ' ' << averageReadings.at(2) << endl;
+
+	return averageReadings;
 }

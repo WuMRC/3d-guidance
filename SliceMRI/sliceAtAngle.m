@@ -13,36 +13,8 @@ assert(yCenter >= 1 & yCenter <= ySize);
 xDiff = round(xSize / 2 - xCenter);
 yDiff = round(ySize / 2 - yCenter);
 
-% % Create padding matrices
-% if xDiff == 0 && yDiff == 0
-%     xPad = [];
-%     yPad = [];
-% else
-%     if xDiff == 0
-%         xPad = [];
-%     else
-%         xPad = zeros(ySize, abs(xDiff));
-%     end
-%     
-%     if yDiff == 0
-%         yPad = [];
-%     else
-%         yPad = zeros(abs(yDiff), xSize);
-%     end
-% end
-% 
-% % Create padding matrix to fill intersection of xPad and yPad as seen below
-% %                       0 0 1 2 3 4
-% %                       0 0 5 6 7 8
-% %                           0 0 0 0
-% % insert zeros(3,2)->       0 0 0 0
-% %                           0 0 0 0
-% if ~isempty(xPad) && ~isempty(yPad)
-%     intersectionPad = zeros(abs(yDiff), abs(xDiff));
-% end
-
 if xDiff < 0
-    xStart = abs(xDiff);
+    xStart = 1+ abs(xDiff);
     xEnd = xSize + abs(xDiff);
 else
     xStart = 1;
@@ -50,7 +22,7 @@ else
 end
 
 if yDiff < 0
-    yStart = abs(yDiff);
+    yStart = 1+ abs(yDiff);
     yEnd = ySize + abs(yDiff);
 else
     yStart = 1;
@@ -58,7 +30,8 @@ else
 end
 
 for i = 1:zSize
-    paddedImage = zeros(xSize + xDiff, ySize + yDiff);
+%     paddedImage = zeros(xSize + xDiff, ySize + yDiff);
+    paddedImage = zeros(ySize + abs(yDiff), xSize + abs(xDiff));
     paddedImage(yStart:yEnd, xStart:xEnd) = squeeze(imStack(:,:,i));
     
     rotatedImage = imrotate(paddedImage, angle);
