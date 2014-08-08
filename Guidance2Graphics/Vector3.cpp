@@ -1,5 +1,11 @@
 #include "Vector3.h"
 
+// Classic Constructor
+Vector3::Vector3()
+{
+	set(0,0,0);
+};
+
 // Custom Constructor
 Vector3::Vector3(double val1, double val2, double val3)
 {
@@ -8,9 +14,9 @@ Vector3::Vector3(double val1, double val2, double val3)
 
 void Vector3::set(double val1, double val2, double val3)
 {
-	m_vBody.push_back(val1);
-	m_vBody.push_back(val2);
-	m_vBody.push_back(val3);
+	m_vBody.at(0) = val1;
+	m_vBody.at(1) = val2;
+	m_vBody.at(2) = val3;
 };
 
 Vector3 Vector3::crossProduct(Vector3 v2)
