@@ -1,26 +1,24 @@
-function [axial,coronal,sagittal] = sliceViews(filePath)
+function [axial,coronal,sagittal] = sliceViews(imStack)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
-files = dir(filePath);
+axial = zeros(size(imStack,1), size(imStack,2), size(imStack,3));
+coronal = zeros(size(imStack,3), size(imStack,2), size(imStack,1));
+sagittal = zeros(size(imStack,3), size(imStack,1), size(imStack,2));
 
-currentImage = imread(fullfile(filePath,files(3).name));
-imageStack = zeros(size(currentImage,1), size(currentImage,2), length(files) - 2);
-imageStack(:,:,1) = currentImage;
+for i = 1:max(size(imStack))
+    
+   if i < size(axial,3)
+      axial(:,:,i) = imadjust(imStack(:,:,i), [.5;.6], [0;1]); 
+   end
 
-for i = 4:length(files)
-   currentImage = imread(fullfile(filePath,files(i).name));
-   imageStack(:,:,i-2) = currentImage;
+   if i < size(coronal,3)
+       coronal(:,:,i) = imadjust(squeeze(imStack(i,:,:))', [.5;.6],[0;1]);
+   end
+
+   if i < size(sagittal,3)
+       sagittal(:,:,i) = imadjust(squeeze(imStack(:,i,:))', [.5;.6],[0;1]);
+   end
 end
-
-axial = imageStack;
-coronal = zeros(size(imageStack,3), size(imageStack,2), size(imageStack,1));
-sagittal = zeros(size(imageStack,3), size(imageStack,1), size(imageStack,2));
-
-for i = 1:size(imageStack,1)
-   coronal(:,:,i) = squeeze(imageStack(i,:,:))';
-   sagittal(:,:,i) = squeeze(imageStack(:,i,:))';
-end
-
 end
 
