@@ -27,6 +27,8 @@ void GConfigParser::parseConfiguration()
 	fs["ImagesLocation"] >> m_sImagesLocation;
 	fs["NumberOfFiducials"] >> m_nNumberOfFiducials;
 	fs["RegistrationMode"] >> m_nRegistrationMode;
+	fs["Metric"] >> m_bMetric;
+	fs["Rate"] >> m_nRate;
 
 	fs.release();
 }

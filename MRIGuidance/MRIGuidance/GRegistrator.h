@@ -1,6 +1,7 @@
 #ifndef GREGISTRATOR
 #define GREGISTRATOR
 
+#include "GMagneticTracker.h"
 #include <opencv2/core/core.hpp>
 #include <string>
 #include <vector>
@@ -12,9 +13,11 @@ public:
 	GRegistrator();
 
 	GRegistrator(int numberOfFiducials, int registrationMode, std::string windowName, std::vector<cv::Mat> images);
+	GRegistrator(int numberOfFiducials, int registrationMode, std::string windowName, std::vector<cv::Mat> images, GMagneticTracker *tracker);
 
 	void displayImageWindow();
 	void registerFiducials();
+	void computeTransformation(cv::Mat &T);
 
 	// Classic Destructor
 	~GRegistrator(void){};
@@ -41,7 +44,13 @@ private:
 	// Matrix containing pixel coordinates of fiducial markers
 	cv::Mat m_PixelMat;
 
+	// Magnetic tracker
+	GMagneticTracker *m_pTracker;
+
+	// Set pixel coordinates upon clicking mouse on specified window
 	void onMousePixel(int e, int x, int y, int d, void *ptr);
+
+	// Push coordinates obtained in physical world
 	void pushPhysicalCoord();
 };
 #endif GREGISTRATOR

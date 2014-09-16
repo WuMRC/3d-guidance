@@ -18,6 +18,8 @@ public:
 	std::string getImagesLocation() const {return m_sImagesLocation;};
 	int getNumberOfFiducials() const {return m_nNumberOfFiducials;};
 	int getRegistrationMode() const {return m_nRegistrationMode;};
+	bool getMetricMode() const {return m_bMetric;};
+	int getRate() const {return m_nRate;};
 
 	// Classic Destructor
 	~GConfigParser(void){};
@@ -33,6 +35,10 @@ private:
 
 	// Mode used for registering fiducial markers
 	int m_nRegistrationMode;
+
+	// Magnetic Tracker Values
+	bool m_bMetric;
+	int m_nRate;
 };
 
 #endif

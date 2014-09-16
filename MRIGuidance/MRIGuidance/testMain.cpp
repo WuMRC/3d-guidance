@@ -1,6 +1,7 @@
 #include "GConfigParser.h"
 #include "GImagesPreprocessor.h"
 #include "GRegistrator.h"
+#include "GMagneticTracker.h"
 #include <iostream>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -16,9 +17,20 @@ int main()
 	GImagesPreprocessor *preprocessor = new GImagesPreprocessor(parser->getImagesLocation());
 	preprocessor->loadAllImages();
 
-	GRegistrator *registrator = new GRegistrator(parser->getNumberOfFiducials(), parser->getRegistrationMode(), "Axial", preprocessor->getImages());
+	GRegistrator *registrator;
+	
+	if (parser->getRegistrationMode() == 1) {
+		registrator = new GRegistrator(parser->getNumberOfFiducials(), parser->getRegistrationMode(), "Axial", preprocessor->getImages());
+	}
+	else if (parser->getRegistrationMode() == 2) {
+		GMagneticTracker *tracker = new GMagneticTracker(parser->getMetricMode(), parser->getRate());
+		registrator = new GRegistrator(parser->getNumberOfFiducials(), parser->getRegistrationMode(), "Axial", preprocessor->getImages(), tracker);
+	}
+
 	registrator->displayImageWindow();
 	registrator->registerFiducials();
+	cv::Mat T;
+	registrator->computeTransformation(T);
 	//vector<cv::Mat> coronal;
 	//preprocessor->sliceView(preprocessor->getImages(), coronal,"row");
 	//vector<cv::Mat> sagittal; 
