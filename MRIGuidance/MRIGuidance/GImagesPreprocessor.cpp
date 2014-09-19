@@ -23,7 +23,7 @@ void GImagesPreprocessor::loadAllImages()
 		// Retrieve file at position "iterator"
 		string filename = iterator->path().filename().string();
 
-		cv::Mat image = cv::imread(m_sImagesFolder + filename, CV_LOAD_IMAGE_GRAYSCALE);
+		cv::Mat image = cv::imread(m_sImagesFolder + filename, CV_LOAD_IMAGE_COLOR);
 
 		m_vOriginalImages.push_back(image);
 	}

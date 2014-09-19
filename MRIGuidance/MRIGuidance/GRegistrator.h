@@ -2,6 +2,7 @@
 #define GREGISTRATOR
 
 #include "GMagneticTracker.h"
+#include "GWindowDisplay.h"
 #include <opencv2/core/core.hpp>
 #include <string>
 #include <vector>
@@ -23,6 +24,9 @@ public:
 	~GRegistrator(void){};
 
 private:
+	// Window displaying images to select points from
+	GWindowDisplay *m_pWindow;
+
 	// Number of fiducial markers to be registered
 	int m_nNumberOfFiducials;
 

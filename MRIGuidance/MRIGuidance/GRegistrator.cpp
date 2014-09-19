@@ -14,6 +14,7 @@ GRegistrator::GRegistrator(int numberOfFiducials, int registrationMode, string w
 {
 	m_PhysicalMat = cv::Mat(3, 1, CV_64FC1);
 	m_PixelMat = m_PhysicalMat;
+	m_pWindow = new GWindowDisplay(windowName, images, true);
 }
 
 GRegistrator::GRegistrator(int numberOfFiducials, int registrationMode, std::string windowName, std::vector<cv::Mat> images, GMagneticTracker *tracker):
@@ -63,8 +64,7 @@ void GRegistrator::pushPhysicalCoord()
 void GRegistrator::displayImageWindow()
 {
 	m_nImageIndex = 0;
-	cv::imshow(m_sWindowName, m_vImages[m_nImageIndex]);
-	cv::createTrackbar("Image", m_sWindowName, &m_nImageIndex, m_vImages.size() - 1);
+	m_pWindow->createWindow();
 }
 
 void printMat(const cv::Mat &m)
@@ -86,7 +86,7 @@ void GRegistrator::registerFiducials()
 		pushPhysicalCoord();
 
 		while(tempCol.at<double>(0,0) == -1) {
-			cv::imshow(m_sWindowName, m_vImages[m_nImageIndex]);
+			m_pWindow->displayWindow();
 			cv::setMouseCallback(m_sWindowName, onMousePixel_, &tempCol);
 
 			int key = cv::waitKey(50);
@@ -100,6 +100,8 @@ void GRegistrator::registerFiducials()
 
 	m_PhysicalMat = m_PhysicalMat.colRange(1, m_PhysicalMat.cols);
 	m_PixelMat = m_PixelMat.colRange(1, m_PixelMat.cols);
+
+	m_pWindow->deleteWindow();
 }
 
 void GRegistrator::computeTransformation(cv::Mat &T) {

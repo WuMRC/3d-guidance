@@ -2,6 +2,7 @@
 #include "GImagesPreprocessor.h"
 #include "GRegistrator.h"
 #include "GMagneticTracker.h"
+#include "GLiveTracking.h"
 #include <iostream>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -31,40 +32,13 @@ int main()
 	registrator->registerFiducials();
 	cv::Mat T;
 	registrator->computeTransformation(T);
-	//vector<cv::Mat> coronal;
-	//preprocessor->sliceView(preprocessor->getImages(), coronal,"row");
-	//vector<cv::Mat> sagittal; 
-	//preprocessor->sliceView(preprocessor->getImages(), sagittal,"col");
 
-	//cv::imshow("Axial", preprocessor->getImages()[0]);
-	//cv::imshow("Coronal", coronal[0]);
-	//cv::imshow("Sagittal", sagittal[0]);
+	GLiveTracking *liveTracker = new GLiveTracking(preprocessor->getImages(), T);
+	liveTracker->sliceAllViews();
+	liveTracker->displayWindows();
+	liveTracker->track();
 
-	//int axialSlider = 0;
-	//cv::createTrackbar("Image", "Axial", &axialSlider, preprocessor->getImages().size() - 1);
-
-	//int coronalSlider = 0;
-	//cv::createTrackbar("Image", "Coronal", &coronalSlider, coronal.size() - 1);
-
-	//int sagittalSlider = 0;
-	//cv::createTrackbar("Image", "Sagittal", &sagittalSlider, sagittal.size() - 1);
-
-	//cv::Mat test = cv::Mat::zeros(3,3, CV_64FC1);
-
-	//while(true) {
-	//	cv::imshow("Axial", preprocessor->getImages()[axialSlider]);
-	//	cv::imshow("Coronal", coronal[coronalSlider]);
-	//	cv::imshow("Sagittal", sagittal[sagittalSlider]);
-
-	//	//cv::setMouseCallback("Axial", onMouse, 0);
-
-
-	//	int key = cv::waitKey(50);
-	//	if (key == 27) {
-	//		break;
-	//	}
-	//}
-
+	delete liveTracker;
 	delete parser;
 	delete preprocessor;
 	return 0;

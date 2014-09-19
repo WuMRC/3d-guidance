@@ -7,7 +7,6 @@ using namespace std;
 
 GMagneticTracker::GMagneticTracker(bool metric, double rate): m_bMetric(metric), m_fRate(rate)
 {
-	CSystem	PCIBird;
 	int errorCode;
 	int i;
 	int sensorID;
@@ -53,7 +52,7 @@ GMagneticTracker::GMagneticTracker(bool metric, double rate): m_bMetric(metric),
 	// does not mean that all sensors and transmitters that can be supported
 	// are physically attached)
 	//
-	errorCode = GetBIRDSystemConfiguration(&PCIBird.m_config);
+	errorCode = GetBIRDSystemConfiguration(&m_System.m_config);
 	if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
 
 	// Get Sensor Configuration
@@ -65,8 +64,8 @@ GMagneticTracker::GMagneticTracker(bool metric, double rate): m_bMetric(metric),
 	// a status which indicates whether a physical sensor is attached to this
 	// sensor port or not.
 	//
-	m_pSensor = new CSensor[PCIBird.m_config.numberSensors];
-	for(i=0;i<PCIBird.m_config.numberSensors;i++)
+	m_pSensor = new CSensor[m_System.m_config.numberSensors];
+	for(i=0;i<m_System.m_config.numberSensors;i++)
 	{
 		errorCode = GetSensorConfiguration(i, &(m_pSensor+i)->m_config);
 		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
@@ -80,8 +79,8 @@ GMagneticTracker::GMagneticTracker(bool metric, double rate): m_bMetric(metric),
 	// port or not. In a single transmitter system it is only necessary to 
 	// find where that transmitter is in order to turn it on and use it.
 	//
-	m_pXmtr = new CXmtr[PCIBird.m_config.numberTransmitters];
-	for(i=0;i<PCIBird.m_config.numberTransmitters;i++)
+	m_pXmtr = new CXmtr[m_System.m_config.numberTransmitters];
+	for(i=0;i<m_System.m_config.numberTransmitters;i++)
 	{
 		errorCode = GetTransmitterConfiguration(i, &(m_pXmtr+i)->m_config);
 		if(errorCode!=BIRD_ERROR_SUCCESS) errorHandler(errorCode);
@@ -113,7 +112,7 @@ GMagneticTracker::GMagneticTracker(bool metric, double rate): m_bMetric(metric),
 	//-----------------------------------------------------------
 
 	// Search for the first attached transmitter and turn it on
-	for(id=0;id<PCIBird.m_config.numberTransmitters;id++)
+	for(id=0;id<m_System.m_config.numberTransmitters;id++)
 	{
 		if((m_pXmtr+id)->m_config.attached)
 		{
@@ -134,7 +133,7 @@ GMagneticTracker::GMagneticTracker(bool metric, double rate): m_bMetric(metric),
 	DOUBLE_POSITION_ANGLES_TIME_Q_RECORD record[8*4], *pRecord = record;
 
 	// Set the data format type for each attached sensor.
-	for(i=0;i<PCIBird.m_config.numberSensors;i++)
+	for(i=0;i<m_System.m_config.numberSensors;i++)
 	{
 		DATA_FORMAT_TYPE type = DOUBLE_POSITION_ANGLES_TIME_Q;
 		errorCode = SetSensorParameter(i,DATA_FORMAT,&type,sizeof(type));
@@ -158,6 +157,11 @@ void GMagneticTracker::errorHandler(int error)
 }
 
 cv::Mat GMagneticTracker::stabilityReading(int numSeconds) {
+
+	cout << "Press a number/letter and press ENTER to begin reading: ";
+	char input;
+	cin >> input;
+
 	clock_t wait = 10;
 	clock_t goal = wait + clock();
 
@@ -186,7 +190,7 @@ cv::Mat GMagneticTracker::stabilityReading(int numSeconds) {
 	cv::Mat averageMat(3, 1, CV_64FC1);
 	averageMat.at<double>(0,0) = x / numReadings;
 	averageMat.at<double>(1,0) = y / numReadings;
-	averageMat.at<double>(3,0) = z / numReadings;
+	averageMat.at<double>(2,0) = z / numReadings;
 
 	return averageMat;
 }
